@@ -27,6 +27,7 @@
 #include "sc_log.h"
 #include "sc_screen.h"
 #include "sc_session.h"
+#include "bg_clock.h"
 
 // storm RVAs (preferred base 0x15000000; resolved from the LOADED module below).
 #define STORM_RVA_BPP        0x0005A7C0u   // = 8
@@ -505,6 +506,7 @@ HkOrd432(DWORD dst, DWORD src, DWORD dstPitch, DWORD srcPitch, DWORD region) {
                 s += srcPitch;
             }
             ++g_mirrorFrames;
+            BgClockDraw((BYTE*)(DWORD_PTR)dst, dstPitch, W, rows);
         } else {
             // Width-only: the console direct-blits at x<640, so only the far band mirrors and
             // the console is never painted over.

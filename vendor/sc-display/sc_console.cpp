@@ -447,6 +447,7 @@ static void OnFrame(void) {
             // Every root, not only the console: a root left direct-blitting would
             // be erased by the whole-frame mirror (the F10 menu, tooltips, chat).
             ConvertToBuffer(dlg, name);
+            if (strcmp(name, "StatRes") == 0) TryMove(dlg, name, ScScreenTargetWidth()-640, 0, true, false);
             if (IsConsoleRoot(name)) TryMove(dlg, name, (ScScreenTargetWidth()-640)/2, ScScreenConsoleShiftY(), true, false);
         } else if (atMenu && ScReadable(dlg + SC_BINDLG_OFF_BOUNDS, 8)) {
             // A full glue screen moves once it rests at (0,0); a popup moves at once,

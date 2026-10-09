@@ -12,7 +12,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import urllib.request
 
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 REPO = 'japanoxx-afk/burning'
 MANIFEST_URL = f'https://raw.githubusercontent.com/{REPO}/main/version.json'
 DEFAULT_GAME = r'C:\Users\seo\Downloads\Starcraft 1.16.1 FOR MOD'
