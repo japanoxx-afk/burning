@@ -18,4 +18,19 @@ int main(){
     assert(BgCrusaderSpeed(5*256)==4*256);
     assert(BgCrusaderSpeed(0)==0);
     assert(BgCrusaderSpeed(0xffffffff)==3435973836u);
+    BgBounds building={64,48,64,48},unit={8,8,8,8};BgExitPoint exits[40];
+    for(BgExitPoint rally: {BgExitPoint{4000,1000},BgExitPoint{0,1000},BgExitPoint{1000,0},BgExitPoint{1000,4000},BgExitPoint{4000,4000}}){
+        BgExitCandidates(1000,1000,building,unit,rally.x,rally.y,exits);
+        for(int i=0;i<40;i++){
+            assert(exits[i].x>=920&&exits[i].x<=1080&&exits[i].y>=936&&exits[i].y<=1064);
+            assert(exits[i].x==920||exits[i].x==1080||exits[i].y==936||exits[i].y==1064);
+            if(i)assert(BgExitDistance(exits[i-1],rally.x,rally.y)<=BgExitDistance(exits[i],rally.x,rally.y));
+        }
+        if(rally.x==4000)assert(exits[0].x==1080);
+        if(rally.x==0)assert(exits[0].x==920);
+        if(rally.y==0)assert(exits[0].y==936);
+        if(rally.y==4000)assert(exits[0].y==1064);
+    }
+    // Edge-of-map candidates remain signed so the caller rejects off-map exits.
+    BgExitCandidates(20,20,building,unit,0,20,exits);assert(exits[0].x<0);
 }

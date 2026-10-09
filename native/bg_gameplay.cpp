@@ -57,19 +57,36 @@ static bool CheckPosition(DWORD unit,const Point*in,Point*out){
 }
 extern "C" void SC_GAME_ENTRY BgRallySpawn(DWORD unit,DWORD factory){
  if(!SinglePlayer()||!ScUnitPtrValid(unit)||!ScUnitPtrValid(factory))return;
- DWORD target=*(DWORD*)(factory+0xfc);Point wanted=*(Point*)(factory+0xf8);
- if(target==factory||!wanted.x)return; // No explicit rally was set.
+ DWORD target=*(DWORD*)(factory+0xfc);Point rally=*(Point*)(factory+0xf8);
+ if(target==factory||!rally.x)return; // No explicit rally was set.
+ if(ScUnitPtrValid(target)&&ScUnitHitPoints(target)&&ScUnitSprite(target))rally=*(Point*)(target+0x28);
  WORD w=*(WORD*)ScRuntimeAddr(0x0057F1D4u),h=*(WORD*)ScRuntimeAddr(0x0057F1D6u);
- if(wanted.x>=w*32u||wanted.y>=h*32u)return;
- Point prev=*(Point*)(unit+0x28),actual;
- SetPosition(unit,wanted);
- if(!CheckPosition(unit,&wanted,&actual)){SetPosition(unit,prev);ScLog("BG RALLY blocked: kept normal production position");return;}
+ if(rally.x>=w*32u||rally.y>=h*32u)return;
+ WORD uid=*(WORD*)(unit+0x64),fid=*(WORD*)(factory+0x64);if(uid>=228||fid>=228)return;
+ DWORD table=*(DWORD*)ScRuntimeAddr(0x00513DF8u);
+ if(!ScReadable(table+fid*8,8)||!ScReadable(table+uid*8,8))return;
+ BgBounds fb=*(BgBounds*)(table+fid*8),ub=*(BgBounds*)(table+uid*8);
+ if(fb.left>256||fb.top>256||fb.right>256||fb.bottom>256||ub.left>128||ub.top>128||ub.right>128||ub.bottom>128)return;
+ Point center=*(Point*)(factory+0x28),prev=*(Point*)(unit+0x28),actual;
+ BgExitPoint candidates[40];BgExitCandidates(center.x,center.y,fb,ub,rally.x,rally.y,candidates);
+ bool found=false;
+ for(int i=0;i<40;i++){
+  BgExitPoint p=candidates[i];if(p.x<ub.left||p.y<ub.top||p.x+ub.right>=w*32||p.y+ub.bottom>=h*32)continue;
+  Point wanted={(WORD)p.x,(WORD)p.y};SetPosition(unit,wanted);
+  if(CheckPosition(unit,&wanted,&actual)&&BgExitDistance({actual.x,actual.y},p.x,p.y)<=32*32u){
+   bool overlaps=(int)actual.x-ub.left<=(int)center.x+fb.right&&(int)actual.x+ub.right>=(int)center.x-fb.left&&
+                 (int)actual.y-ub.top<=(int)center.y+fb.bottom&&(int)actual.y+ub.bottom>=(int)center.y-fb.top;
+   if(!overlaps){found=true;break;}
+  }
+  SetPosition(unit,prev);
+ }
+ if(!found){SetPosition(unit,prev);ScLog("BG RALLY exit blocked: kept normal production position");return;}
  DWORD d=unit,f=ScRuntimeVa(0x00493CA0u);
  __asm__ __volatile__("push $0\n\tcall *%1":"+D"(d):"r"(f):"eax","ecx","edx","memory","cc");
  SetPosition(unit,actual);
  DWORD a=unit;f=ScRuntimeVa(0x00494160u);
  __asm__ __volatile__("call *%1":"+a"(a):"r"(f):"ecx","edx","memory","cc");
- ScLog("BG RALLY spawn unit=%u position=%u,%u target=%u,%u",*(WORD*)(unit+0x64),actual.x,actual.y,wanted.x,wanted.y);
+ ScLog("BG RALLY nearby exit unit=%u factory=%u,%u position=%u,%u rally=%u,%u",uid,center.x,center.y,actual.x,actual.y,rally.x,rally.y);
 }
 extern "C" void __attribute__((naked)) BgRallyGate(){
  __asm__ __volatile__("pushfl\n\tpushal\n\tpush 24(%esp)\n\tpush 32(%esp)\n\tcall _BgRallySpawn\n\tadd $8,%esp\n\tpopal\n\tpopfl\n\tjmp *_rallyNext");
@@ -168,10 +185,10 @@ bool BgGameplayInstall(){
  BYTE wp[]={0x55,0x8b,0xec,0x83,0xec,0x58};
  if(!ScHookInstall(&windowHook,"BG selection keys",ScRuntimeAddr(0x004D1D70u),(void*)WindowProc,6,wp,6))return false;
  oldProc=(WNDPROC)windowHook.trampoline;
- if(ScEnvOptIn("BG_RALLY_SPAWN")){
+ {
   checkPosition=ScRuntimeVa(0x0049D3E0u);
   BYTE rp[]={0x85,0xc9,0x56,0x8b,0xf0};
-  if(!ScHookInstall(&rallyHook,"BG rally spawn",ScRuntimeAddr(0x00466F50u),(void*)BgRallyGate,5,rp,5))return false;
+  if(!ScHookInstall(&rallyHook,"BG rally-side exit",ScRuntimeAddr(0x00466F50u),(void*)BgRallyGate,5,rp,5))return false;
   rallyNext=(DWORD)rallyHook.trampoline;
  }
  ScCirclesInit(ScEngineModuleBase(),true);if(ScCirclesInstall()!=1)return false;

@@ -12,7 +12,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import urllib.request
 
-VERSION = '0.4.0'
+VERSION = '0.4.1'
 REPO = 'japanoxx-afk/burning'
 MANIFEST_URL = f'https://raw.githubusercontent.com/{REPO}/main/version.json'
 DEFAULT_GAME = r'C:\Users\seo\Downloads\Starcraft 1.16.1 FOR MOD'
@@ -79,7 +79,7 @@ nonexclusive=true
 ''',encoding='ascii')
     return runtime
 
-def launch_game(source,mode,fullscreen,status,rally_spawn=False):
+def launch_game(source,mode,fullscreen,status):
     import ctypes
     kernel=ctypes.WinDLL('kernel32',use_last_error=True)
     kernel.CreateMutexW.restype=ctypes.c_void_p
@@ -91,16 +91,16 @@ def launch_game(source,mode,fullscreen,status,rally_spawn=False):
     if error==183:
         kernel.CloseHandle(handle)
         raise RuntimeError('이미 BG 게임이 실행 중입니다.')
-    try: return _launch_game(source,mode,fullscreen,status,rally_spawn)
+    try: return _launch_game(source,mode,fullscreen,status)
     finally: kernel.CloseHandle(handle)
 
-def _launch_game(source,mode,fullscreen,status,rally_spawn=False):
+def _launch_game(source,mode,fullscreen,status):
     runtime=prepare_runtime(source,mode,fullscreen,status)
     env=os.environ.copy()
     env.update(BG_GAME_DIR=str(runtime), BG_DISPLAY_DLL=str(runtime/'bg_display.dll'),
                SCPLUGIN_LOG=str(HOME/'display.log'), SCPLUGIN_WIDESCREEN='1',
                SCPLUGIN_WS_STAGE='3', SCPLUGIN_WS_GEOMETRY=mode,
-               SCPLUGIN_MENU_CENTRE='1', SCPLUGIN_STORM_PRESENT='2', BG_RALLY_SPAWN='1' if rally_spawn else '0')
+               SCPLUGIN_MENU_CENTRE='1', SCPLUGIN_STORM_PRESENT='2')
     if mode.startswith('640'):
         env['SCPLUGIN_WIDESCREEN']='0'
     with open(HOME/'launch.log','a',encoding='utf-8') as log:
@@ -181,7 +181,6 @@ class App(tk.Tk):
         self.path=tk.StringVar(value=cfg.get('game_dir',DEFAULT_GAME))
         self.mode=tk.StringVar(value=cfg.get('mode','1024x576'))
         self.full=tk.BooleanVar(value=cfg.get('fullscreen',True))
-        self.rally_spawn=tk.BooleanVar(value=cfg.get('rally_spawn',False))
         self.status=tk.StringVar(value='게임 폴더를 확인하고 실행하세요.')
         frame=ttk.Frame(self,padding=26);frame.pack(fill='both',expand=True)
         ttk.Label(frame,text='BURNING GROUND',font=('맑은 고딕',24,'bold'),foreground='#ffab54').pack(anchor='w')
@@ -194,7 +193,7 @@ class App(tk.Tk):
         ttk.Label(row,text='게임 내부 해상도').pack(side='left')
         ttk.Combobox(row,textvariable=self.mode,values=MODES,state='readonly',width=23).pack(side='left',padx=16)
         ttk.Checkbutton(row,text='전체 화면',variable=self.full).pack(side='left')
-        ttk.Checkbutton(frame,text='랠리 지정 위치에서 유닛 생산 (해제하면 생산 후 이동)',variable=self.rally_spawn).pack(anchor='w',pady=(12,0))
+        ttk.Label(frame,text='생산 건물 주변에서 랠리 방향에 가까운 쪽으로 유닛이 나옵니다.').pack(anchor='w',pady=(12,0))
         ttk.Label(frame,text='미네랄 10 · . 대기 일꾼 전체 선택 · F2 전투 유닛 전체 선택\nW-MODE 플러그인 질문은 ‘아니요’를 선택하세요. 싱글플레이용입니다.',wraplength=680).pack(anchor='w',pady=(12,16))
         row=ttk.Frame(frame);row.pack(fill='x')
         self.start=ttk.Button(row,text='게임 실행',command=self.run);self.start.pack(side='left',fill='x',expand=True)
@@ -214,7 +213,7 @@ class App(tk.Tk):
         if folder:self.path.set(folder)
     def say(self,text):self.after(0,lambda:self.status.set(text))
     def save(self):
-        (HOME/'config.json').write_text(json.dumps({'game_dir':self.path.get(),'mode':self.mode.get(),'fullscreen':self.full.get(),'rally_spawn':self.rally_spawn.get()},ensure_ascii=False,indent=2),encoding='utf-8')
+        (HOME/'config.json').write_text(json.dumps({'game_dir':self.path.get(),'mode':self.mode.get(),'fullscreen':self.full.get()},ensure_ascii=False,indent=2),encoding='utf-8')
     def work(self,fn):
         if self.busy:return
         self.busy=True;self.start.configure(state='disabled');self.update.configure(state='disabled')
@@ -227,8 +226,8 @@ class App(tk.Tk):
     def done(self):
         self.busy=False;self.start.configure(state='normal');self.update.configure(state='normal')
     def run(self):
-        self.save();source,mode,full,rally=self.path.get(),self.mode.get(),self.full.get(),self.rally_spawn.get()
-        self.work(lambda:launch_game(source,mode,full,self.say,rally))
+        self.save();source,mode,full=self.path.get(),self.mode.get(),self.full.get()
+        self.work(lambda:launch_game(source,mode,full,self.say))
     def update_launcher(self):
         self.save()
         def update():
