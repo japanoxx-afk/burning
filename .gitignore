@@ -1,0 +1,8 @@
+research/
+build/
+dist/
+__pycache__/
+*.spec
+runtime/
+launcher_config.json
+*.log
