@@ -112,7 +112,7 @@ def _launch_game(source,mode,fullscreen,status):
     status('게임이 종료되었습니다.')
 
 def fetch_manifest():
-    req=urllib.request.Request(MANIFEST_URL,headers={'User-Agent':f'BurningGround/{VERSION}','Cache-Control':'no-cache'})
+    req=urllib.request.Request(f'{MANIFEST_URL}?check={time.time_ns()}',headers={'User-Agent':f'BurningGround/{VERSION}','Cache-Control':'no-cache'})
     with urllib.request.urlopen(req,timeout=20) as response:
         manifest=json.loads(response.read(65536))
     version_key(manifest['version'])
