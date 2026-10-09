@@ -14,8 +14,10 @@
 #include "sc_screen_patches_1280x880.h"
 #include "sc_screen_patches_1280x720.h"
 #include "sc_screen_patches_1536x864.h"
+#include "sc_screen_patches_1024x576.h"
 
 static const ScScreenGeometry* const SC_WS_PRESETS[] = {
+    &SC_WS_GEOM_1024x576,
     &SC_WS_GEOM_1280x880,   // default: 2x wide, 2x tall playfield (1280x800)
     &SC_WS_GEOM_1280x720,   // 16:9 -- 1.5x fills a 1080p screen with no side bars
     &SC_WS_GEOM_1536x864,   // 16:9 -- 1.25x on 1080p: more map, smaller UI
@@ -25,7 +27,7 @@ static const ScScreenGeometry* const SC_WS_PRESETS[] = {
 // The largest table, for statics sized by the table (sc_screen.cpp's saved originals).
 #define SC_WS_MAX2(a, b) ((a) > (b) ? (a) : (b))
 #define SC_WS_PATCH_COUNT_MAX \
-    SC_WS_MAX2(SC_WS_PATCH_COUNT_1280x880, \
-               SC_WS_MAX2(SC_WS_PATCH_COUNT_1280x720, SC_WS_PATCH_COUNT_1536x864))
+    SC_WS_MAX2(SC_WS_PATCH_COUNT_1024x576, SC_WS_MAX2(SC_WS_PATCH_COUNT_1280x880, \
+               SC_WS_MAX2(SC_WS_PATCH_COUNT_1280x720, SC_WS_PATCH_COUNT_1536x864)))
 
 #endif  // SC_SCREEN_PRESETS_H

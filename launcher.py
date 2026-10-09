@@ -12,13 +12,13 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import urllib.request
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 REPO = 'japanoxx-afk/burning'
 MANIFEST_URL = f'https://raw.githubusercontent.com/{REPO}/main/version.json'
 DEFAULT_GAME = r'C:\Users\seo\Downloads\Starcraft 1.16.1 FOR MOD'
 HOME = Path(os.environ.get('LOCALAPPDATA', str(Path.home()))) / 'BurningGround'
 RESOURCE = Path(getattr(sys, '_MEIPASS', Path(__file__).parent)) / 'assets'
-MODES = ('1280x720', '1536x864', '640x480 (원본)')
+MODES = ('1024x576', '1280x720', '1536x864', '640x480 (원본)')
 SOURCE_HASHES = {
     'StarCraft.exe':'3e2211ce7a105e5a7b67ebbd33f163a45bf4c45b4d0d759f6d1d966448e0c38f',
     'BG_v2.00.exe':'a2775df3703e24860e580af60723955069355961fc3b0ca0928c15a552c74df1',
@@ -180,7 +180,7 @@ class App(tk.Tk):
         style.configure('TCheckbutton',background='#131a22',foreground='#e6edf3')
         cfg=load_config()
         self.path=tk.StringVar(value=cfg.get('game_dir',DEFAULT_GAME))
-        self.mode=tk.StringVar(value=cfg.get('mode','1280x720'))
+        self.mode=tk.StringVar(value=cfg.get('mode','1024x576'))
         self.full=tk.BooleanVar(value=cfg.get('fullscreen',True))
         self.status=tk.StringVar(value='게임 폴더를 확인하고 실행하세요.')
         frame=ttk.Frame(self,padding=26);frame.pack(fill='both',expand=True)
@@ -194,7 +194,7 @@ class App(tk.Tk):
         ttk.Label(row,text='게임 내부 해상도').pack(side='left')
         ttk.Combobox(row,textvariable=self.mode,values=MODES,state='readonly',width=23).pack(side='left',padx=16)
         ttk.Checkbutton(row,text='전체 화면',variable=self.full).pack(side='left')
-        ttk.Label(frame,text='16:9 확장은 더 넓은 지도를 표시합니다. 기존 HUD는 유지됩니다.\nW-MODE 플러그인 질문은 ‘아니요’를 선택하세요. 멀티플레이는 미검증입니다.',wraplength=620).pack(anchor='w',pady=(16,20))
+        ttk.Label(frame,text='16:9 화면 · 하단 HUD 중앙 배치 · HUD 주변 지형 표시\nW-MODE 플러그인 질문은 ‘아니요’를 선택하세요. 멀티플레이는 미검증입니다.',wraplength=620).pack(anchor='w',pady=(16,20))
         row=ttk.Frame(frame);row.pack(fill='x')
         self.start=ttk.Button(row,text='게임 실행',command=self.run);self.start.pack(side='left',fill='x',expand=True)
         self.update=ttk.Button(row,text='런처 업데이트',command=self.update_launcher);self.update.pack(side='left',padx=8)

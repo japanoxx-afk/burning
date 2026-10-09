@@ -447,7 +447,7 @@ static void OnFrame(void) {
             // Every root, not only the console: a root left direct-blitting would
             // be erased by the whole-frame mirror (the F10 menu, tooltips, chat).
             ConvertToBuffer(dlg, name);
-            if (IsConsoleRoot(name)) TryMove(dlg, name, 0, ScScreenConsoleShiftY(), true, false);
+            if (IsConsoleRoot(name)) TryMove(dlg, name, (ScScreenTargetWidth()-640)/2, ScScreenConsoleShiftY(), true, false);
         } else if (atMenu && ScReadable(dlg + SC_BINDLG_OFF_BOUNDS, 8)) {
             // A full glue screen moves once it rests at (0,0); a popup moves at once,
             // before its first composite. A popup flagged 0x08000000 (the Single Player
