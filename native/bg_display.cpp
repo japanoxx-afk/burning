@@ -6,6 +6,7 @@
 #include "sc_stormpresent.h"
 #include "sc_log.h"
 #include "sc_session.h"
+#include "bg_gameplay.h"
 
 static BYTE* entry;
 static BYTE saved[7];
@@ -19,6 +20,13 @@ extern "C" void __attribute__((force_align_arg_pointer)) InitializeDisplay() {
     ScLogOpen();
     BYTE* base = (BYTE*)GetModuleHandleW(NULL);
     ScEngineSetModuleBase(base);
+    if (!ScEnvOptIn("SCPLUGIN_WIDESCREEN")) {
+        if (ScSessionInstall(base, true) != 2) ExitProcess(73);
+        ScConsoleInstall(base, true, false);
+        if (!BgGameplayInstall()) ExitProcess(74);
+        ScLog("BG GAMEPLAY READY original 640x480");
+        return;
+    }
     ScScreenInstall(base, SC_MODE_LOGONLY);
     if (!ScScreenActive()) {
         ScLog("BG DISPLAY REFUSED: mod signatures differ; terminating before video initialization");
@@ -30,6 +38,7 @@ extern "C" void __attribute__((force_align_arg_pointer)) InitializeDisplay() {
     ScConsoleInstall(base, true, false);
     ScStormPresentInstall(base, true);
     ScScreenLogStats();
+    if (!BgGameplayInstall()) { ScLog("BG GAMEPLAY signature conflict"); ExitProcess(74); }
     ScLog("BG DISPLAY READY %dx%d", ScScreenTargetWidth(), ScScreenTargetHeight());
 }
 

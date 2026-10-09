@@ -58,6 +58,7 @@
 #include "sc_unit.h"
 
 #include "sc_menu.h"
+#include "bg_gameplay.h"
 
 // The composite-target bit (0x0041C810: `test [dlg+0x18],0x10000000` -> the
 // screen buffer). StatRes ships with it (flags 0x7000200D read live, 19.1).
@@ -416,7 +417,7 @@ static void OnFrame(void) {
     // buffer is never presented there) and are touched only by the menu centring.
     bool inGame = false;
     const bool walk = (g_move || g_centre) && ScScreenActive();
-    if (walk) {
+    {
         DWORD d = head;
         int k = 0;
         while (d && k < SC_MAX_DIALOGS_WALK) {
@@ -430,6 +431,7 @@ static void OnFrame(void) {
         g_inGame = inGame ? 1 : 0;
     }
     if (inGame && g_move && g_fullRedraw) RequestFullRedraw();
+    BgGameplayFrame();
     const bool atMenu = walk && !inGame && g_centre;
     int mdx = 0, mdy = 0;
     if (atMenu) ScMenuOffset(&mdx, &mdy);
@@ -516,10 +518,7 @@ void ScConsoleInstall(BYTE* moduleBase, bool writeAllowed, bool trace) {
     g_traceLines = g_traceDropped = g_frames = g_moves = g_menuMoves = g_converted = g_fullFrames = 0;
     g_session = 0;
     g_inGame = -1;
-    if (!g_move && !g_trace && !g_centre) {
-        ScLog("CONSOLE: off (no console shift in the table; %%SCPLUGIN_CONSOLE_TRACE%% unset)");
-        return;
-    }
+    // Gameplay keyboard/command features also need the frame hook at 640x480.
     if (!ScHookInstall(&g_hkCompose, "frameCompose", ScRuntimeAddr(SC_VA_FRAME_COMPOSE),
                        (void*)&HkFrameCompose, (int)sizeof(kPrologueCompose),
                        kPrologueCompose, (int)sizeof(kPrologueCompose))) {

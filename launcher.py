@@ -12,7 +12,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import urllib.request
 
-VERSION = '0.3.1'
+VERSION = '0.4.0'
 REPO = 'japanoxx-afk/burning'
 MANIFEST_URL = f'https://raw.githubusercontent.com/{REPO}/main/version.json'
 DEFAULT_GAME = r'C:\Users\seo\Downloads\Starcraft 1.16.1 FOR MOD'
@@ -79,7 +79,7 @@ nonexclusive=true
 ''',encoding='ascii')
     return runtime
 
-def launch_game(source,mode,fullscreen,status):
+def launch_game(source,mode,fullscreen,status,rally_spawn=False):
     import ctypes
     kernel=ctypes.WinDLL('kernel32',use_last_error=True)
     kernel.CreateMutexW.restype=ctypes.c_void_p
@@ -91,19 +91,18 @@ def launch_game(source,mode,fullscreen,status):
     if error==183:
         kernel.CloseHandle(handle)
         raise RuntimeError('이미 BG 게임이 실행 중입니다.')
-    try: return _launch_game(source,mode,fullscreen,status)
+    try: return _launch_game(source,mode,fullscreen,status,rally_spawn)
     finally: kernel.CloseHandle(handle)
 
-def _launch_game(source,mode,fullscreen,status):
+def _launch_game(source,mode,fullscreen,status,rally_spawn=False):
     runtime=prepare_runtime(source,mode,fullscreen,status)
     env=os.environ.copy()
     env.update(BG_GAME_DIR=str(runtime), BG_DISPLAY_DLL=str(runtime/'bg_display.dll'),
                SCPLUGIN_LOG=str(HOME/'display.log'), SCPLUGIN_WIDESCREEN='1',
                SCPLUGIN_WS_STAGE='3', SCPLUGIN_WS_GEOMETRY=mode,
-               SCPLUGIN_MENU_CENTRE='1', SCPLUGIN_STORM_PRESENT='2')
+               SCPLUGIN_MENU_CENTRE='1', SCPLUGIN_STORM_PRESENT='2', BG_RALLY_SPAWN='1' if rally_spawn else '0')
     if mode.startswith('640'):
-        # The bridge selects the isolated install; the display DLL runs only in native modes.
-        env['BG_DISPLAY_DLL']='original'
+        env['SCPLUGIN_WIDESCREEN']='0'
     with open(HOME/'launch.log','a',encoding='utf-8') as log:
         status('BG 모드 실행 중…')
         proc=subprocess.Popen([str(runtime/'bg_start.exe'),str(runtime/'BG_v2.00.exe'),str(runtime/'bg_bridge.dll')],cwd=runtime,env=env,stdout=log,stderr=log,creationflags=0x08000000)
@@ -171,7 +170,7 @@ class App(tk.Tk):
         super().__init__()
         HOME.mkdir(parents=True,exist_ok=True)
         self.title(f'Burning Ground 런처 v{VERSION}')
-        self.geometry('680x470');self.resizable(False,False)
+        self.geometry('760x470');self.resizable(False,False)
         self.configure(bg='#131a22')
         style=ttk.Style(self);style.theme_use('clam')
         style.configure('TFrame',background='#131a22')
@@ -182,6 +181,7 @@ class App(tk.Tk):
         self.path=tk.StringVar(value=cfg.get('game_dir',DEFAULT_GAME))
         self.mode=tk.StringVar(value=cfg.get('mode','1024x576'))
         self.full=tk.BooleanVar(value=cfg.get('fullscreen',True))
+        self.rally_spawn=tk.BooleanVar(value=cfg.get('rally_spawn',False))
         self.status=tk.StringVar(value='게임 폴더를 확인하고 실행하세요.')
         frame=ttk.Frame(self,padding=26);frame.pack(fill='both',expand=True)
         ttk.Label(frame,text='BURNING GROUND',font=('맑은 고딕',24,'bold'),foreground='#ffab54').pack(anchor='w')
@@ -194,19 +194,27 @@ class App(tk.Tk):
         ttk.Label(row,text='게임 내부 해상도').pack(side='left')
         ttk.Combobox(row,textvariable=self.mode,values=MODES,state='readonly',width=23).pack(side='left',padx=16)
         ttk.Checkbutton(row,text='전체 화면',variable=self.full).pack(side='left')
-        ttk.Label(frame,text='16:9 화면 · 하단 HUD 중앙 배치 · HUD 주변 지형 표시\nW-MODE 플러그인 질문은 ‘아니요’를 선택하세요. 멀티플레이는 미검증입니다.',wraplength=620).pack(anchor='w',pady=(16,20))
+        ttk.Checkbutton(frame,text='랠리 지정 위치에서 유닛 생산 (해제하면 생산 후 이동)',variable=self.rally_spawn).pack(anchor='w',pady=(12,0))
+        ttk.Label(frame,text='미네랄 10 · . 대기 일꾼 전체 선택 · F2 전투 유닛 전체 선택\nW-MODE 플러그인 질문은 ‘아니요’를 선택하세요. 싱글플레이용입니다.',wraplength=680).pack(anchor='w',pady=(12,16))
         row=ttk.Frame(frame);row.pack(fill='x')
         self.start=ttk.Button(row,text='게임 실행',command=self.run);self.start.pack(side='left',fill='x',expand=True)
         self.update=ttk.Button(row,text='런처 업데이트',command=self.update_launcher);self.update.pack(side='left',padx=8)
         ttk.Button(row,text='로그 폴더',command=lambda:os.startfile(HOME)).pack(side='left')
+        ttk.Button(row,text='업데이트 내역',command=self.show_changes).pack(side='left',padx=(8,0))
         ttk.Label(frame,textvariable=self.status,wraplength=620,foreground='#9bb4ca').pack(anchor='w',pady=(22,0))
         self.busy=False
+    def show_changes(self):
+        window=tk.Toplevel(self);window.title('Burning Ground 업데이트 내역');window.geometry('660x540')
+        content=tk.Text(window,wrap='word',bg='#131a22',fg='#e6edf3',font=('맑은 고딕',11),padx=20,pady=20)
+        scrollbar=ttk.Scrollbar(window,command=content.yview);scrollbar.pack(side='right',fill='y')
+        content.configure(yscrollcommand=scrollbar.set);content.pack(fill='both',expand=True)
+        content.insert('1.0',(RESOURCE/'CHANGELOG.txt').read_text(encoding='utf-8'));content.configure(state='disabled')
     def choose(self):
         folder=filedialog.askdirectory(initialdir=self.path.get())
         if folder:self.path.set(folder)
     def say(self,text):self.after(0,lambda:self.status.set(text))
     def save(self):
-        (HOME/'config.json').write_text(json.dumps({'game_dir':self.path.get(),'mode':self.mode.get(),'fullscreen':self.full.get()},ensure_ascii=False,indent=2),encoding='utf-8')
+        (HOME/'config.json').write_text(json.dumps({'game_dir':self.path.get(),'mode':self.mode.get(),'fullscreen':self.full.get(),'rally_spawn':self.rally_spawn.get()},ensure_ascii=False,indent=2),encoding='utf-8')
     def work(self,fn):
         if self.busy:return
         self.busy=True;self.start.configure(state='disabled');self.update.configure(state='disabled')
@@ -219,8 +227,8 @@ class App(tk.Tk):
     def done(self):
         self.busy=False;self.start.configure(state='normal');self.update.configure(state='normal')
     def run(self):
-        self.save();source,mode,full=self.path.get(),self.mode.get(),self.full.get()
-        self.work(lambda:launch_game(source,mode,full,self.say))
+        self.save();source,mode,full,rally=self.path.get(),self.mode.get(),self.full.get(),self.rally_spawn.get()
+        self.work(lambda:launch_game(source,mode,full,self.say,rally))
     def update_launcher(self):
         self.save()
         def update():
