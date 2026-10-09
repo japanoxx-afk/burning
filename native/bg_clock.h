@@ -28,12 +28,13 @@ static void BgClockDraw(BYTE* pixels, DWORD pitch, int width, int height) {
     if (!ScReadable(0x0058D6F8u,4)) return;
     unsigned t=*(DWORD*)ScRuntimeAddr(0x0058D6F8u);
     char text[32]; snprintf(text,sizeof(text),"%02u:%02u",t/60,t%60);
-    int x0=width/2+306-(int)strlen(text)*12, y0=height-196;
+    // Centre in the clear terrain pocket immediately right of the minimap.
+    int x0=(width-640)/2+230-(int)strlen(text)*3, y0=height-134;
     for(int pass=0;pass<2;pass++) for(int c=0;text[c];c++) {
         int n=text[c]==':'?10:text[c]-'0';
         for(int y=0;y<7;y++)for(int x=0;x<5;x++)if(digits[n][y]&(1<<(4-x)))
-          for(int sy=0;sy<2;sy++)for(int sx=0;sx<2;sx++) {
-            int px=x0+c*12+x*2+sx+(pass==0), py=y0+y*2+sy+(pass==0);
+          {
+            int px=x0+c*6+x+(pass==0), py=y0+y+(pass==0);
             if(px>=0&&px<width&&py>=0&&py<height) pixels[py*pitch+px]=pass?ink:shadow;
           }
     }
